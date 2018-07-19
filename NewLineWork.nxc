@@ -1,0 +1,109 @@
+void Reset() { // Resets the speed of the motors to 0
+  Off(OUT_B);
+  Off(OUT_A);
+}
+
+void TurnInCircle() { // Turns the robot in a clockwise motion.
+  int speed = 35; //Speed in which it turns.
+  OnFwd(OUT_A, -speed);
+  OnFwd(OUT_B, speed);
+}
+
+void TurnRight() { //Turn right
+  int speed = 35; //Speed in which it turns.
+  Reset();
+  OnFwd(OUT_B, speed);
+}
+
+void TurnLeft() { //Turn left
+  int speed = 35; //Speed in which it turns.
+  Reset();
+  OnFwd(OUT_A, speed);
+}
+
+void MoveForward() { //Move forward
+  int speed = 50; //Speed in which it moves.
+  OnFwd(OUT_A, speed - 1); //Tries to stabalise the motor speed
+  OnFwd(OUT_B, speed + 2); //Tries to stabalise the motor speed
+}
+
+bool CheckForLine() { //Checks for the line.
+  int minValue = 30; //The lowest value allowed to be considered on the line.
+  if(SensorValue(IN_2) < minValue) { //If the sensor value is less than the lowest value.
+    TextOut(0,LCD_LINE1,"LINE: NOT"); //Print on brick
+    return true;
+  } else {
+        TextOut(0,LCD_LINE1,"LINE: YES"); //Print on brick
+    return false;
+
+  }
+}
+
+void CheckLine() { //Is it on the line?
+  if(CheckForLine()) { //If the robot is / isn't on the line.
+    TurnInCircle(); //If it's not, turn in a circle to look for it.
+  } else {
+    MoveForward(); //If it is, move forward.
+  }
+}
+
+void CheckSound() { //Has someone clapped?
+  int threshold = 60; //The highest amount of sound allowed.
+  if(SensorValue(IN_3) > threshold) { //If it is more than the threshold.
+    Wait(300); //Wait for .3 seconds.
+    TurnInCircle(); //If it's not, turn in a circle.
+    Wait(3660 + (3660 / 4)); //Wait till it has turned 360 + 180
+    Reset();
+  }
+}
+
+bool CheckObstacles() { //Is there an obstacle in the way?
+  int distance = 20; //lowest distance between the robot and the obstacle
+  bool noLine = false; //bool for the while loop.
+
+  if(SensorUS(IN_1) < distance) { //Is the robot too close to an obstacle.
+    noLine = true; //Prepare the bool for the loop.
+    Reset(); //Reset the motors.
+    TurnLeft(); //Turn left
+    Wait(1500);
+    MoveForward(); //Move forward
+    Wait(1500);
+    TurnRight(); //Turn right
+    Wait(1500);
+    MoveForward(); //Move forward
+    Wait(2500);
+    TurnRight(); //Turn right
+    Wait(1600);
+    Reset(); //Reset the motors.
+    Wait(SEC_2);
+    while (noLine) { //While loop to see if it's on the line yet.
+      if(CheckForLine()) {
+        MoveForward(); //If it's not on the line, then move forward.
+      } else {
+        TurnLeft(); // Else, move to the position where it can correctly follow the line.
+        Wait(1000);
+        MoveForward();
+        Wait(1000);
+        TurnRight();
+        Wait(500);
+        MoveForward();
+        Wait(500);
+        return true;
+      }
+    }
+  } else {
+    return true;
+  }
+}
+
+task main() { //Main task that runs the other methods.
+  SetSensorLight(IN_2); //Init the sensors.
+  SetSensorUltrasonic(IN_1);
+  SetSensorSound(IN_3);
+  while(true) { //While the programme is running.
+    if(CheckObstacles()) { //If there isn't an obstacle in the way then...
+      CheckSound(); //Check for a clap.
+      CheckLine(); //Check for the line.
+    }
+  }
+}
